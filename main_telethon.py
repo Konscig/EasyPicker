@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import logging
+import time
 
 from random import randint
 
@@ -9,17 +10,14 @@ from root_package.settings import settings
 
 bot = TelegramClient('bot_session', settings.bot.api_id, settings.bot.api_hash)
 
-
 @bot.on(events.NewMessage(pattern='/start'))
 async def start(event):
     await event.respond(f"Здравствуйте, {event.sender.first_name}")
-
 
 @bot.on(events.NewMessage(pattern='/count'))
 async def subs_count(event):
     count = await bot.get_participants(settings.bot.group_name)
     await event.respond(f'Количество участников: {count.total}')
-
 
 @bot.on(events.NewMessage(pattern='/members'))
 async def subs_list(event):
@@ -29,7 +27,6 @@ async def subs_list(event):
     for participant in participants:
         string += "ID: " + str(participant.id) + " USERNAME:" + str(participant.username) + '\n'
     await event.respond(f'{string}')
-
 
 @bot.on(events.ChatAction())
 async def chat_action(event):
@@ -41,27 +38,65 @@ async def chat_action(event):
             user = await event.get_user()
             await bot.send_message(settings.bot.admin_id, f'Участник {user.first_name} {user.id} вышел из канала.')
 
+@bot.on(events.CallbackQuery)
+async def admin_reply(event):
+    try:
+        async for message in bot.iter_messages(5867206789, limit=1):
+            if message.id != Kmsg:
+                if message.is_reply:
+                    replied_msg = await message.get_reply_message()
+                    msg_text = replied_msg.text
+                else:
+                    msg_text = message.text
+
+                try:
+                    msg = int(msg_text)
+                    print('loh')
+                    break
+                except ValueError:
+                    await event.respond('Неверный формат')
+                
+        print('loh2')     
+    except Exception as e:
+        print(f"Ошибка при получении сообщения: {str(e)}")
 
 @bot.on(events.NewMessage(pattern='/random'))
 async def random_winner(event):
+    global Kmsg
+    if event.sender.id == settings.bot.admin_id:
+        await event.respond('Введите количество победителей (count):')
+        Kmsg=bot.get_messages(5867206789, limit=1)
+        count = admin_reply(event)
+
+        await event.respond('Введите таймер (в секундах) перед определением победителей (timer):')
+        Kmsg=bot.get_messages(5867206789, limit=1)
+        timer = admin_reply(event)
+
+    else:
+        await event.respond('Вы не администратор бота.')
+        return
+    
+    await asyncio.sleep(int(timer))
+
     participants = await bot.get_participants(settings.bot.group_name)
     win_list = list()
     for i in range(len(participants)):
         if (participants[i].id != 673819158 and participants[i].id != 5300757743 and participants[i].id != 6381033226):
-            win_list.append(str(participants[i].id)+" "+str(participants[i].username))
+            win_list.append(str(participants[i].id) + " " + str(participants[i].username))
+
     winners = []
-    count = 2
-    for i in range(count):
-        winner = randint(0, len(win_list))
-        winners.append(win_list[winner])
-        del win_list[winner]
-    print(winners)
+    for i in range(int(count)):
+        if win_list:
+            winner_index = randint(0, len(win_list) - 1)
+            winners.append(win_list.pop(winner_index))
+
+    await event.respond(f'Победители: {", ".join(winners)}')
+
 
 
 async def main():
     await bot.start(bot_token=settings.bot.bot_token)
     await bot.run_until_disconnected()
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
