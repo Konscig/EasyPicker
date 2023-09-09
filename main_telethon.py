@@ -78,7 +78,7 @@ async def chat_action(event):
             await bot.send_message(settings.bot.admin_id, f'Участник {name} вошел в канал.')
             random_index = randint(0, len(in_list) - 1)
             random_element = in_list[random_index]
-            await bot.send_message(settings.bot.admin_id, f'{random_element} Приветствуем нового челика - {name}!')
+            await bot.send_message(settings.bot.group_id, f'{random_element} Приветствуем нового челика - {name}!')
         elif event.user_left:
             user = await event.get_user()
             
@@ -92,7 +92,7 @@ async def chat_action(event):
             await bot.send_message(settings.bot.admin_id, f'Участник {name} вышел из канала.')
             random_index = randint(0, len(out_list) - 1)
             random_element = out_list[random_index]
-            await bot.send_message(settings.bot.admin_id, f'{random_element} Земля тебе асфальтом, {name}...')
+            await bot.send_message(settings.bot.group_id, f'{random_element} Земля тебе асфальтом, {name}...')
 
 async def admin_reply():
     global Kmsg
