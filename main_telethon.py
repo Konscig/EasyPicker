@@ -34,9 +34,13 @@ async def subs_list(event):
     string = ""
     i = 1
     for participant in participants:
-        string += str(i) + ". ID: " + str(participant.id) + "\n"
+
+        string += str(i) + ".\n"
         if participant.username != None:
-            string += "└" + (len(str(i)))*" " + "USERNAME: " + str(participant.username) + "\n"
+            string += "├ ID: " + str(participant.id) + "\n"
+            string += "└ USERNAME: " + str(participant.username) + "\n"
+        else:
+            string += "└ ID: " + str(participant.id) + "\n"
         i += 1
     await event.respond(f'{string}')
 
