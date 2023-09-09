@@ -31,18 +31,33 @@ async def subs_count(event):
 async def subs_list(event):
     participants = await bot.get_participants(settings.bot.group_name)
 
-    string = ""
+    max_message_length = 4096
     i = 1
-    for participant in participants:
+    message = ""
 
-        string += str(i) + ".\n"
-        if participant.username != None:
-            string += "├ ID: " + str(participant.id) + "\n"
-            string += "└ USERNAME: " + str(participant.username) + "\n"
+    for participant in participants:
+        current_info = ""
+        current_info += "[ " + str(i) + " ]\n"
+        
+        if participant.first_name:
+            current_info += f"├ {participant.first_name}\n"
+        if participant.last_name:
+            current_info += f"├ {participant.last_name}\n"
+        if participant.username:
+            current_info += f"├ USERNAME: {participant.username}\n"
+        
+        current_info += f"└ ID: {participant.id}\n"
+
+        if len(message + current_info) < max_message_length:
+            message += current_info
         else:
-            string += "└ ID: " + str(participant.id) + "\n"
+            await event.respond(message)
+            message = current_info
+
         i += 1
-    await event.respond(f'{string}')
+
+    if message:
+        await event.respond(message)
 
 @bot.on(events.ChatAction())
 async def chat_action(event):
