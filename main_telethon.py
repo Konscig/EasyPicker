@@ -59,15 +59,40 @@ async def subs_list(event):
     if message:
         await event.respond(message)
 
+in_list  = ['🌚', '🔥', '✅', '😍', '👑', '✔', '☑️', '⚡', '😈', '❤️', '❤️‍🔥', '⭐', '🌟', '♥️', '💖', '💎', '⚜️', '🥳', '🥵', '🧲', '🚀', '😱', '💛', '🤩', '🍺', '🍻', '🇨🇳', '🍚']
+out_list = ['🗿', '💩', '🐁', '✍', '🐷', '❌', '😕', '☠️', '😭', '😔', '🤖', '🐔', '🍆', '💦', '🐭', '🤬', '😡', '🐤', '🐒', '🙉', '🐟', '🤡', '👽', '👾']
+
 @bot.on(events.ChatAction())
 async def chat_action(event):
     if str(event.chat_id) == str(settings.bot.group_id):
+        
         if event.user_added:
             user = await event.get_user()
-            await bot.send_message(settings.bot.admin_id, f'Участник {user.first_name} {user.id} вошел в канал.')
+            name = ""
+            if user.username:
+                name = user.username
+            elif user.first_name:
+                name = user.first_name
+            else:
+                name = user.id
+            await bot.send_message(settings.bot.admin_id, f'Участник {name} вошел в канал.')
+            random_index = randint(0, len(in_list) - 1)
+            random_element = in_list[random_index]
+            await bot.send_message(settings.bot.admin_id, f'{random_element} Приветствуем нового челика - {name}!')
         elif event.user_left:
             user = await event.get_user()
-            await bot.send_message(settings.bot.admin_id, f'Участник {user.first_name} {user.id} вышел из канала.')
+            
+            name = ""
+            if user.username:
+                name = user.username
+            elif user.first_name:
+                name = user.first_name
+            else:
+                name = user.id
+            await bot.send_message(settings.bot.admin_id, f'Участник {name} вышел из канала.')
+            random_index = randint(0, len(out_list) - 1)
+            random_element = out_list[random_index]
+            await bot.send_message(settings.bot.admin_id, f'{random_element} Земля тебе асфальтом, {name}...')
 
 async def admin_reply():
     global Kmsg
