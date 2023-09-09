@@ -14,6 +14,14 @@ bot = TelegramClient('bot_session', settings.bot.api_id, settings.bot.api_hash)
 async def start(event):
     await event.respond(f"Здравствуйте, {event.sender.first_name}")
 
+@bot.on(events.CallbackQuery)
+async def top(event):
+    async for message in bot.iter_messages(581154838, limit=1):
+        print(message.id, message.text)
+
+@bot.on(events.NewMessage(pattern='/try'))
+async def prov(event):
+    await top(event)
 @bot.on(events.NewMessage(pattern='/count'))
 async def subs_count(event):
     count = await bot.get_participants(settings.bot.group_name)
@@ -24,8 +32,12 @@ async def subs_list(event):
     participants = await bot.get_participants(settings.bot.group_name)
 
     string = ""
+    i = 1
     for participant in participants:
-        string += "ID: " + str(participant.id) + " USERNAME:" + str(participant.username) + '\n'
+        string += str(i) + ". ID: " + str(participant.id) + "\n"
+        if participant.username != None:
+            string += "└" + (len(str(i)))*" " + "USERNAME: " + str(participant.username) + "\n"
+        i += 1
     await event.respond(f'{string}')
 
 @bot.on(events.ChatAction())
@@ -38,39 +50,26 @@ async def chat_action(event):
             user = await event.get_user()
             await bot.send_message(settings.bot.admin_id, f'Участник {user.first_name} {user.id} вышел из канала.')
 
-@bot.on(events.CallbackQuery)
-async def admin_reply(event):
-    try:
-        async for message in bot.iter_messages(5867206789, limit=1):
-            if message.id != Kmsg:
-                if message.is_reply:
-                    replied_msg = await message.get_reply_message()
-                    msg_text = replied_msg.text
-                else:
-                    msg_text = message.text
-
-                try:
-                    msg = int(msg_text)
-                    print('loh')
-                    break
-                except ValueError:
-                    await event.respond('Неверный формат')
-                
-        print('loh2')     
-    except Exception as e:
-        print(f"Ошибка при получении сообщения: {str(e)}")
+async def admin_reply():
+    global Kmsg
+    while True:
+        if Kmsg != bot.get_messages(5867206789, limit=1):
+            break
+    return bot.get_messages(5867206789, limit=1)
 
 @bot.on(events.NewMessage(pattern='/random'))
 async def random_winner(event):
     global Kmsg
     if event.sender.id == settings.bot.admin_id:
         await event.respond('Введите количество победителей (count):')
-        Kmsg=bot.get_messages(5867206789, limit=1)
-        count = admin_reply(event)
+        await bot.get_messages(5867206789, limit=1)
+        print(await bot.get_messages(5867206789, limit=1))
+        count = admin_reply()
 
         await event.respond('Введите таймер (в секундах) перед определением победителей (timer):')
-        Kmsg=bot.get_messages(5867206789, limit=1)
-        timer = admin_reply(event)
+        Kmsg=bot.get_messages(5867206789, limit=1).text
+        print(Kmsg, " r")
+        timer = admin_reply()
 
     else:
         await event.respond('Вы не администратор бота.')
