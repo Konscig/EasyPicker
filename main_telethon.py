@@ -44,7 +44,7 @@ async def subs_list(event):
         if participant.last_name:
             current_info += f"├ {participant.last_name}\n"
         if participant.username:
-            current_info += f"├ USERNAME: {participant.username}\n"
+            current_info += f"├ USER: @{participant.username}\n"
         
         current_info += f"└ ID: {participant.id}\n"
 
