@@ -7,6 +7,7 @@ from random import randint
 
 from telethon import TelegramClient, events
 from root_package.settings import settings
+from root_package.mess_list import phrases, farewell_phrases
 
 bot = TelegramClient('bot_session', settings.bot.api_id, settings.bot.api_hash)
 
@@ -78,7 +79,7 @@ async def chat_action(event):
             await bot.send_message(settings.bot.admin_id, f'Участник {name} вошел в канал.')
             random_index = randint(0, len(in_list) - 1)
             random_element = in_list[random_index]
-            await bot.send_message(settings.bot.group_id, f'{random_element} Приветствуем нового челика - {name}!')
+            await bot.send_message(settings.bot.group_id, f'{random_element} {phrases[randint(0,len(phrases))]} - {name}!')
         elif event.user_left:
             user = await event.get_user()
             
@@ -92,7 +93,7 @@ async def chat_action(event):
             await bot.send_message(settings.bot.admin_id, f'Участник {name} вышел из канала.')
             random_index = randint(0, len(out_list) - 1)
             random_element = out_list[random_index]
-            await bot.send_message(settings.bot.group_id, f'{random_element} Земля тебе асфальтом, {name}...')
+            await bot.send_message(settings.bot.group_id, f'{random_element} {farewell_phrases[randint(0,len(farewell_phrases))]} {name}...')
 
 async def admin_reply():
     global Kmsg
@@ -144,3 +145,4 @@ async def main():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())
+
