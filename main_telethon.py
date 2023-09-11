@@ -8,25 +8,25 @@ from random import randint
 from telethon import TelegramClient, events
 from root_package.settings import settings
 from root_package.mess_list import phrases, farewell_phrases
+from root_package.keyboards import button1
+
+from telethon.tl.functions.messages import GetMessagesRequest
+
 
 bot = TelegramClient('bot_session', settings.bot.api_id, settings.bot.api_hash)
+bot.parse_mode = "html"
+
 
 @bot.on(events.NewMessage(pattern='/start'))
 async def start(event):
     await event.respond(f"Здравствуйте, {event.sender.first_name}")
 
-@bot.on(events.CallbackQuery)
-async def top(event):
-    async for message in bot.iter_messages(581154838, limit=1):
-        print(message.id, message.text)
 
-@bot.on(events.NewMessage(pattern='/try'))
-async def prov(event):
-    await top(event)
 @bot.on(events.NewMessage(pattern='/count'))
 async def subs_count(event):
     count = await bot.get_participants(settings.bot.group_name)
     await event.respond(f'Количество участников: {count.total}')
+
 
 @bot.on(events.NewMessage(pattern='/members'))
 async def subs_list(event):
@@ -39,14 +39,14 @@ async def subs_list(event):
     for participant in participants:
         current_info = ""
         current_info += "[ " + str(i) + " ]\n"
-        
+
         if participant.first_name:
             current_info += f"├ {participant.first_name}\n"
         if participant.last_name:
             current_info += f"├ {participant.last_name}\n"
         if participant.username:
             current_info += f"├ USER: @{participant.username}\n"
-        
+
         current_info += f"└ ID: {participant.id}\n"
 
         if len(message + current_info) < max_message_length:
@@ -60,16 +60,19 @@ async def subs_list(event):
     if message:
         await event.respond(message)
 
-in_list  = ['🌚', '🔥', '✅', '😍', '👑', '✔', '☑️', '⚡', '😈', '❤️', '❤️‍🔥', '⭐', '🌟', '♥️', '💖', '💎', '⚜️', '🥳', '🥵', '🧲', '🚀', '😱', '💛', '🤩', '🍺', '🍻', '🇨🇳', '🍚']
-out_list = ['🗿', '💩', '🐁', '✍', '🐷', '❌', '😕', '☠️', '😭', '😔', '🤖', '🐔', '🍆', '💦', '🐭', '🤬', '😡', '🐤', '🐒', '🙉', '🐟', '🤡', '👽', '👾']
+
+in_list = ['🌚', '🔥', '✅', '😍', '👑', '✔', '☑️', '⚡', '😈', '❤️', '❤️‍🔥', '⭐', '🌟', '♥️', '💖', '💎', '⚜️', '🥳', '🥵', '🧲',
+           '🚀', '😱', '💛', '🤩', '🍺', '🍻', '🇨🇳', '🍚']
+out_list = ['🗿', '💩', '🐁', '✍', '🐷', '❌', '😕', '☠️', '😭', '😔', '🤖', '🐔', '🍆', '💦', '🐭', '🤬', '😡', '🐤', '🐒', '🙉', '🐟',
+            '🤡', '👽', '👾']
+
 
 @bot.on(events.ChatAction())
 async def chat_action(event):
     if str(event.chat_id) == str(settings.bot.group_id):
-        
+
         if event.user_added:
             user = await event.get_user()
-            name = ""
             if user.username:
                 name = user.username
             elif user.first_name:
@@ -79,11 +82,10 @@ async def chat_action(event):
             await bot.send_message(settings.bot.admin_id, f'Участник {name} вошел в канал.')
             random_index = randint(0, len(in_list) - 1)
             random_element = in_list[random_index]
-            await bot.send_message(settings.bot.group_id, f'{random_element} {phrases[randint(0,len(phrases))]} - {name}!')
+            await bot.send_message(settings.bot.group_name,
+                                   f'{random_element} {phrases[randint(0, len(phrases))]} - {name}!')
         elif event.user_left:
             user = await event.get_user()
-            
-            name = ""
             if user.username:
                 name = user.username
             elif user.first_name:
@@ -93,7 +95,9 @@ async def chat_action(event):
             await bot.send_message(settings.bot.admin_id, f'Участник {name} вышел из канала.')
             random_index = randint(0, len(out_list) - 1)
             random_element = out_list[random_index]
-            await bot.send_message(settings.bot.group_id, f'{random_element} {farewell_phrases[randint(0,len(farewell_phrases))]} {name}...')
+            await bot.send_message(settings.bot.group_name,
+                                   f'{random_element} {farewell_phrases[randint(0, len(farewell_phrases))]} {name}...')
+
 
 async def admin_reply():
     global Kmsg
@@ -101,6 +105,7 @@ async def admin_reply():
         if Kmsg != bot.get_messages(5867206789, limit=1):
             break
     return bot.get_messages(5867206789, limit=1)
+
 
 @bot.on(events.NewMessage(pattern='/random'))
 async def random_winner(event):
@@ -112,20 +117,20 @@ async def random_winner(event):
         count = admin_reply()
 
         await event.respond('Введите таймер (в секундах) перед определением победителей (timer):')
-        Kmsg=bot.get_messages(5867206789, limit=1).text
+        Kmsg = bot.get_messages(5867206789, limit=1).text
         print(Kmsg, " r")
         timer = admin_reply()
 
     else:
         await event.respond('Вы не администратор бота.')
         return
-    
+
     await asyncio.sleep(int(timer))
 
     participants = await bot.get_participants(settings.bot.group_name)
     win_list = list()
     for i in range(len(participants)):
-        if (participants[i].id != 673819158 and participants[i].id != 5300757743 and participants[i].id != 6381033226):
+        if participants[i].id != 673819158 and participants[i].id != 5300757743 and participants[i].id != 6381033226:
             win_list.append(str(participants[i].id) + " " + str(participants[i].username))
 
     winners = []
@@ -137,12 +142,25 @@ async def random_winner(event):
     await event.respond(f'Победители: {", ".join(winners)}')
 
 
+@bot.on(events.NewMessage(pattern='/go'))
+async def randomchik(event):
+    await event.respond("Укажите, что розыгрывается: ")
+    await checkout(events.CallbackQuery())
+
+
+@bot.on(events.CallbackQuery())
+async def checkout(event):
+    entity = await bot.get_entity(settings.bot.admin_id)
+    #message = await bot.get_messages(entity)
+    #print(message.text)
+    # await bot.send_message(settings.bot.group_name, "Ты пидор", buttons=button1)
+
 
 async def main():
     await bot.start(bot_token=settings.bot.bot_token)
     await bot.run_until_disconnected()
 
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())
-
