@@ -145,7 +145,7 @@ async def random_winner(event):
 @bot.on(events.NewMessage(pattern='/go'))
 async def randomchik(event):
     await event.respond("Укажите, что розыгрывается: ")
-    message_for
+    #message_to_go = await
     await bot.send_message(settings.bot.group_name, "Ты пидор", buttons=button1)
     #await checkout(button1)
 
