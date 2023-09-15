@@ -12,7 +12,8 @@ from root_package.settings import settings
 from root_package.mess_list import phrases, farewell_phrases
 from root_package.keyboards import button1, keyboard
 
-from telethon.tl.functions.messages import GetMessagesRequest
+from telethon.tl.functions.messages import SendMessageRequest
+from telethon.tl.functions.messages import SendInlineBotResultRequest
 
 bot = TelegramClient('bot_session', settings.bot.api_id, settings.bot.api_hash)
 bot.parse_mode = "html"
@@ -146,17 +147,17 @@ async def random_winner(event):
 @bot.on(events.NewMessage(pattern='/go'))
 async def randomchik(event):
     global mesg
-    # await bot.send_message(settings.bot.admin_id, 'Welcome', buttons=[
-    #     Button.text('Thanks!', resize=True, single_use=True),
-    #     Button.request_phone('Send phone'),
-    #     Button.request_location('Send location')
-    # ]
-    mesg = await bot.send_message(settings.bot.group_name, "Зуйня", buttons=[Button.inline('Участвовать', data='checkout')])
-    # await checkout(button1)
+    mesg = await bot.send_message(settings.bot.group_name, "🎁Конкурс🎁\n"
+                                                           "Чтобы принять участие, вам необходимо:\n"
+                                                           "1) Быть участником канала🧬\n"
+                                                           "2) Не быть Кашалотиком (Ильей🐳) и Женьком🤡\n"
+                                                           "3) Нажать на кнопку и ждать результат!!💋💋💋",
+                                  buttons=[Button.inline('Участвовать Первым🤓', data='checkout')])
 
 
 @bot.on(events.CallbackQuery())
 async def checkout(event):
+    global mesg
     # message = await bot.get_messages(entity)
     # print(message.text)
     event_data = event.data.decode('utf-8')
@@ -174,16 +175,14 @@ async def checkout(event):
                 if in_channel:
                     file.write(user_id + '\n')
                     await bot.edit_message(settings.bot.group_name, mesg,
-                                           buttons=[Button.inline(f'{len(user_ids)+1}', data='checkout')])
-                    return True
+                                           buttons=[Button.inline(f'Уже участников: {len(user_ids) + 1}🤠', data='checkout')])
+                    random_index = randint(0, len(in_list) - 1)
+                    random_element = in_list[random_index]
+                    await event.answer(f"{random_element}Спасибо! Вы молодец!{random_element}", alert=True)
                 else:
-                    return False
+                    await event.answer("💢Вы не подписаны на канал!💢", alert=True)
             else:
-                return False
-
-
-    # await bot.edit_message(settings.bot.group_name, message=mesg, text="Иди нахуй")
-
+                await event.answer("💞Вы уже участвуете в конкурсе!💞", alert=True)
 
 
 async def main():
