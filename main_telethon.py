@@ -83,7 +83,7 @@ async def chat_action(event):
             await bot.send_message(settings.bot.admin_id, f'Участник {name} вошел в канал.')
             random_index = randint(0, len(in_list) - 1)
             random_element = in_list[random_index]
-            await bot.send_message(settings.bot.group_name,
+            await bot.send_message(settings.bot.admin_id,
                                    f'{random_element} {phrases[randint(0, len(phrases))]} - {name}!')
         elif event.user_left:
             user = await event.get_user()
@@ -96,7 +96,7 @@ async def chat_action(event):
             await bot.send_message(settings.bot.admin_id, f'Участник {name} вышел из канала.')
             random_index = randint(0, len(out_list) - 1)
             random_element = out_list[random_index]
-            await bot.send_message(settings.bot.group_name,
+            await bot.send_message(settings.bot.admin_id,
                                    f'{random_element} {farewell_phrases[randint(0, len(farewell_phrases))]} {name}...')
 
 
@@ -145,12 +145,13 @@ async def random_winner(event):
 
 @bot.on(events.NewMessage(pattern='/go'))
 async def randomchik(event):
+    global mesg
     # await bot.send_message(settings.bot.admin_id, 'Welcome', buttons=[
     #     Button.text('Thanks!', resize=True, single_use=True),
     #     Button.request_phone('Send phone'),
     #     Button.request_location('Send location')
-    # ])
-    await bot.send_message(settings.bot.group_name, "Ты пидор", buttons=button1)
+    # ]
+    mesg = await bot.send_message(settings.bot.group_name, "Зуйня", buttons=[Button.inline('Участвовать', data='checkout')])
     # await checkout(button1)
 
 
@@ -158,9 +159,31 @@ async def randomchik(event):
 async def checkout(event):
     # message = await bot.get_messages(entity)
     # print(message.text)
-    print(event.query.user_id)
+    event_data = event.data.decode('utf-8')
+    if event_data == 'checkout':
+        participants = await bot.get_participants(settings.bot.group_name)
+        with open('root_package/go_list.txt', 'r+') as file:
+            user_ids = set(line.strip() for line in file)
+            user_id = str(event.query.user_id)
+            if user_id not in user_ids:
+                in_channel = False
+                for participant in participants:
+                    if str(participant.id) == user_id:
+                        in_channel = True
+                        break
+                if in_channel:
+                    file.write(user_id + '\n')
+                    await bot.edit_message(settings.bot.group_name, mesg,
+                                           buttons=[Button.inline(f'{len(user_ids)+1}', data='checkout')])
+                    return True
+                else:
+                    return False
+            else:
+                return False
+
+
     # await bot.edit_message(settings.bot.group_name, message=mesg, text="Иди нахуй")
-    return 0
+
 
 
 async def main():
