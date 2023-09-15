@@ -5,13 +5,14 @@ import time
 
 from random import randint
 
+from telethon import Button
+
 from telethon import TelegramClient, events
 from root_package.settings import settings
 from root_package.mess_list import phrases, farewell_phrases
-from root_package.keyboards import button1
+from root_package.keyboards import button1, keyboard
 
 from telethon.tl.functions.messages import GetMessagesRequest
-
 
 bot = TelegramClient('bot_session', settings.bot.api_id, settings.bot.api_hash)
 bot.parse_mode = "html"
@@ -144,16 +145,19 @@ async def random_winner(event):
 
 @bot.on(events.NewMessage(pattern='/go'))
 async def randomchik(event):
-    await event.respond("Укажите, что розыгрывается: ")
-    #message_to_go = await
+    # await bot.send_message(settings.bot.admin_id, 'Welcome', buttons=[
+    #     Button.text('Thanks!', resize=True, single_use=True),
+    #     Button.request_phone('Send phone'),
+    #     Button.request_location('Send location')
+    # ])
     await bot.send_message(settings.bot.group_name, "Ты пидор", buttons=button1)
-    #await checkout(button1)
+    # await checkout(button1)
 
 
 @bot.on(events.CallbackQuery())
 async def checkout(event):
-    #message = await bot.get_messages(entity)
-    #print(message.text)
+    # message = await bot.get_messages(entity)
+    # print(message.text)
     print(event.query.user_id)
     # await bot.edit_message(settings.bot.group_name, message=mesg, text="Иди нахуй")
     return 0
