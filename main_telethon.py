@@ -145,15 +145,18 @@ async def random_winner(event):
 @bot.on(events.NewMessage(pattern='/go'))
 async def randomchik(event):
     await event.respond("Укажите, что розыгрывается: ")
-    await checkout(events.CallbackQuery())
+    message_for
+    await bot.send_message(settings.bot.group_name, "Ты пидор", buttons=button1)
+    #await checkout(button1)
 
 
 @bot.on(events.CallbackQuery())
 async def checkout(event):
-    entity = await bot.get_entity(settings.bot.admin_id)
     #message = await bot.get_messages(entity)
     #print(message.text)
-    # await bot.send_message(settings.bot.group_name, "Ты пидор", buttons=button1)
+    print(event.query.user_id)
+    # await bot.edit_message(settings.bot.group_name, message=mesg, text="Иди нахуй")
+    return 0
 
 
 async def main():
