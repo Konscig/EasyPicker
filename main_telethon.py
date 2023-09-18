@@ -7,10 +7,10 @@ from random import randint
 
 from telethon import Button
 
-from telethon import TelegramClient, events
+from telethon import TelegramClient, events, types
 from root_package.settings import settings
 from root_package.mess_list import phrases, farewell_phrases
-from root_package.keyboards import keyboard
+from root_package.keyboards import keyboard_stopped, keyboard_started
 
 from telethon.tl.functions.messages import SendMessageRequest
 from telethon.tl.functions.messages import SendInlineBotResultRequest
@@ -18,21 +18,29 @@ from telethon.tl.functions.messages import SendInlineBotResultRequest
 bot = TelegramClient('bot_session', settings.bot.api_id, settings.bot.api_hash)
 bot.parse_mode = "html"
 
-mesg = ""
+keyboard = keyboard_stopped
+timer = 0
+count = 0
+message_list = []
+message_list1 = []
+
 
 @bot.on(events.NewMessage(pattern='/start'))
 async def start(event):
+    await bot.delete_messages(event.chat_id, message_ids=event.message.id)
     await event.respond(f"Здравствуйте, {event.sender.first_name}")
 
 
 @bot.on(events.NewMessage(pattern='/count'))
 async def subs_count(event):
+    await bot.delete_messages(event.chat_id, message_ids=event.message.id)
     count = await bot.get_participants(settings.bot.group_name)
     await event.respond(f'Количество участников: {count.total}')
 
 
 @bot.on(events.NewMessage(pattern='/members'))
 async def subs_list(event):
+    await bot.delete_messages(event.chat_id, message_ids=event.message.id)
     participants = await bot.get_participants(settings.bot.group_name)
 
     max_message_length = 4096
@@ -145,30 +153,41 @@ async def random_winner(event):
     await event.respond(f'Победители: {", ".join(winners)}')
 
 
-@bot.on(events.NewMessage(pattern='/go'))
-async def randomchik(event):
-    mesg = await bot.send_message(settings.bot.group_name, "🎁Конкурс🎁\n"
-                                                           "Чтобы принять участие, вам необходимо:\n"
-                                                           "1) Быть участником канала🧬\n"
-                                                           "2) Не быть Кашалотиком (Ильей🐳) и Женьком🤡\n"
-                                                           "3) Нажать на кнопку и ждать результат!!💋💋💋",
-                                  buttons=[Button.inline('Участвовать Первым🤓', data='checkout')])
+# @bot.on(events.NewMessage(pattern='/go'))
+# async def randomchik(event):
+#     await bot.delete_messages(event.chat_id, message_ids=event.message.id)
+#     mesg = await bot.send_message(settings.bot.group_name, "🎁Конкурс🎁\n"
+#                                                            "Чтобы принять участие, вам необходимо:\n"
+#                                                            "1) Быть участником канала🧬\n"
+#                                                            "2) Не быть Кашалотиком (Ильей🐳) и Женьком🤡\n"
+#                                                            "3) Нажать на кнопку и ждать результат!!💋💋💋",
+#                                   buttons=[Button.inline('Участвовать Первым🤓', data='checkout')])
 
 
 
 @bot.on(events.NewMessage(pattern='/fake'))
 async def fake(event):
+    await bot.delete_messages(event.chat_id, message_ids=event.message.id)
     await bot.send_message(settings.bot.group_name, "Это фейк...")
 
 
 @bot.on(events.NewMessage(pattern='/give'))
 async def give(event):
-    await bot.send_message(settings.bot.admin_id, "", buttons=keyboard)
+    global message_list, keyboard
+    await bot.delete_messages(event.chat_id, message_ids=event.message.id)
+    if len(message_list) != 0:
+        for message in reversed(message_list):
+            await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
+        message_list = []
+    mesg1 = await bot.send_message(settings.bot.admin_id, 'Перед запуском конкурса не забудьте установить '
+                                                          'все необходимые параметры в **"Меню управления"**:',
+                                   parse_mode='md', buttons=keyboard)
+    message_list.append(mesg1)
 
 
 @bot.on(events.CallbackQuery())
 async def checkout(event):
-    global mesg
+    global timer, count, message_list, message_list1, keyboard
     # message = await bot.get_messages(entity)
     # print(message.text)
     event_data = event.data.decode('utf-8')
@@ -185,7 +204,7 @@ async def checkout(event):
                         break
                 if in_channel:
                     file.write(user_id + '\n')
-                    await bot.edit_message(settings.bot.admin_id, mesg,
+                    await bot.edit_message(settings.bot.admin_id, message_list1[0],
                                            buttons=[Button.inline(f'Уже участников: {len(user_ids) + 1}🤠', data='checkout')])
                     random_index = randint(0, len(in_list) - 1)
                     random_element = in_list[random_index]
@@ -195,14 +214,45 @@ async def checkout(event):
             else:
                 await event.answer("💞 Вы уже участник 💞", alert=True)
     elif event_data == "start_button":
-        await event.answer("🔥 Конкурс запущен 🔥", alert=True)
-        mesg = await bot.send_message(settings.bot.admin_id, "🎁Конкурс🎁\n"
-                                                               "Чтобы принять участие, вам необходимо:\n"
-                                                               "1) Быть участником канала🧬\n"
-                                                               "2) Не быть Кашалотиком (Ильей🐳) и Женьком🤡\n"
-                                                               "3) Нажать на кнопку и ждать результат!!💋💋💋",
-                                      buttons=[Button.inline('Участвовать Первым🤓', data='checkout')])
-
+        keyboard = keyboard_started
+        await bot.edit_message(settings.bot.admin_id, message_list[0], buttons=keyboard)
+        #if timer and count and mesg:
+        if len(message_list1) == 0:
+            await event.answer("🔥 Конкурс запущен 🔥", alert=True)
+            mesg = await bot.send_message(settings.bot.admin_id, "🎁Конкурс🎁\n"
+                                                                   "Чтобы принять участие, вам необходимо:\n"
+                                                                   "1) Быть участником канала🧬\n"
+                                                                   "2) Не быть Кашалотиком (Ильей🐳) и Женьком🤡\n"
+                                                                   "3) Нажать на кнопку и ждать результат!!💋💋💋",
+                                          buttons=[Button.inline('Участвовать в розыгрыше🤓', data='checkout')])
+            message_list1.append(mesg)
+        else:
+            await event.answer("💢 Розыгрыш запущен 💢", alert=True)
+    elif event_data == "stop_button":
+        keyboard = keyboard_stopped
+        await bot.edit_message(settings.bot.admin_id, message_list[0], buttons=keyboard)
+        for message in message_list1:
+            await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
+        message_list1 = []
+        await event.answer("💢 Остановочка 💢", alert=True)
+    elif event_data == "close_button":
+        for message in message_list:
+            await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
+        message_list = []
+        await event.answer("Не забудьте про розыгрыш!")
+    elif event_data == "delete_button":
+        for message in message_list:
+            await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
+        message_list = []
+        for message in message_list1:
+            await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
+        message_list1 = []
+        keyboard = keyboard_stopped
+        timer = 0
+        count = 0
+        mesg1 = ""
+        mesg = ""
+        await event.answer("💢 Розыгрыш удалён 💢", alert=True)
 
 
 async def main():
