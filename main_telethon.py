@@ -22,7 +22,7 @@ keyboard = keyboard_stopped
 timer = None
 count = None
 text = None
-is_raffle_running = None
+is_raffle_running = False
 message_list = []
 message_list1 = []
 data_message = ""
@@ -122,9 +122,36 @@ async def chat_action(event):
 
 @bot.on(events.NewMessage(pattern='/fake'))
 async def fake(event):
-    if event.peer_id.user_id == settings.bot.admin_id:
-        await bot.delete_messages(event.chat_id, message_ids=event.message.id)
-        await bot.send_message(settings.bot.group_name, "Это фейк...")
+    # if event.peer_id.user_id == settings.bot.admin_id:
+    #     await bot.delete_messages(event.chat_id, message_ids=event.message.id)
+    #     await bot.send_message(settings.bot.group_name, "Это фейк...")
+
+    winners = []
+
+    with open('root_package/go_list.txt', 'r') as file:
+        user_ids = list(line.strip() for line in file)
+        for i in range(3):
+            if user_ids:
+                winner_index = randint(0, len(user_ids) - 1)
+                winners.append(user_ids.pop(winner_index))
+
+    print("Идентификаторы победителей:", winners)
+
+    for i, user_id in enumerate(winners, start=1):
+        user = await bot.get_entity(int(user_id))
+        current_info = f"[ {i} ]\n"
+
+        if user.first_name:
+            current_info += f"├ {user.first_name}\n"
+        if user.last_name:
+            current_info += f"├ {user.last_name}\n"
+        if user.username:
+            current_info += f"├ USER: @{user.username}\n"
+
+        current_info += f"└ ID: {user.id}\n"
+        winners[i - 1] = current_info
+
+    print('Победители:\n' + "".join(winners))
 
 
 @bot.on(events.NewMessage(pattern='/go'))
@@ -177,9 +204,6 @@ async def process_executor(event):
 @bot.on(events.CallbackQuery())
 async def checkout(event):
     global timer, count, text, message_list, message_list1, keyboard, data_message, is_raffle_running
-    # await bot.catch_up()
-    # message = await bot.get_messages(entity)
-    # print(message.text)
     event_data = event.data.decode('utf-8')
     if event_data == 'checkout':
         participants = await bot.get_participants(settings.bot.group_name)
@@ -219,6 +243,7 @@ async def checkout(event):
 
                 if is_raffle_running:
                     winners = []
+
                     with open('root_package/go_list.txt', 'r') as file:
                         user_ids = list(line.strip() for line in file)
                         for i in range(min(len(user_ids),count)):
@@ -226,27 +251,33 @@ async def checkout(event):
                                 winner_index = randint(0, len(user_ids) - 1)
                                 winners.append(user_ids.pop(winner_index))
 
-                    i = 1
-                    for i in range(len(winners)):
-                        winners[i] = await bot.get_entity(int(winners[i]))
-                    print(len(winners))
-                    for participant in winners:
-                        current_info = ""
-                        current_info += "[ " + str(i) + " ]\n"
+                    print("Победители:", winners)
 
-                        if participant.first_name:
-                            current_info += f"├ {participant.first_name}\n"
-                        if participant.last_name:
-                            current_info += f"├ {participant.last_name}\n"
-                        if participant.username:
-                            current_info += f"├ USER: @{participant.username}\n"
+                    for i, user_id in enumerate(winners, start=1):
+                        user = await bot.get_entity(int(user_id))
+                        current_info = f"[ {i} ]\n"
 
-                        current_info += f"└ ID: {participant.id}\n"
-                        winners[i-1] = current_info
+                        if user.first_name:
+                            current_info += f"├ {user.first_name}\n"
+                        if user.last_name:
+                            current_info += f"├ {user.last_name}\n"
+                        if user.username:
+                            current_info += f"├ USER: @{user.username}\n"
 
-                        i += 1
+                        current_info += f"└ ID: {user.id}\n"
+                        winners[i - 1] = current_info
 
-                    await event.respond(f'Победители:\n{"".join(winners)}')
+                    for message in message_list:
+                        await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
+                    message_list = []
+                    for message in message_list1:
+                        await bot.delete_messages(entity=settings.bot.group_name, message_ids=message.id)
+                    message_list1 = []
+                    keyboard = keyboard_stopped
+                    is_raffle_running = False
+                    await event.answer("💢 Розыгрыш Окончен 💢")
+
+                    await bot.send_message(settings.bot.group_name, message=f'Победители:\n{"".join(winners)}')
             else:
                 await event.answer("💢 Розыгрыш запущен 💢")
         else:
