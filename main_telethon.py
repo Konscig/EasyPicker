@@ -21,55 +21,59 @@ bot.parse_mode = "html"
 keyboard = keyboard_stopped
 timer = 0
 count = 0
+text = ""
 message_list = []
 message_list1 = []
-
+data_message = ""
 
 @bot.on(events.NewMessage(pattern='/start'))
 async def start(event):
-    await bot.delete_messages(event.chat_id, message_ids=event.message.id)
-    await event.respond(f"Здравствуйте, {event.sender.first_name}")
+    if event.peer_id.user_id == settings.bot.admin_id:
+        await bot.delete_messages(event.chat_id, message_ids=event.message.id)
+        await event.respond(f"Здравствуйте, {event.sender.first_name}")
 
 
 @bot.on(events.NewMessage(pattern='/count'))
 async def subs_count(event):
-    await bot.delete_messages(event.chat_id, message_ids=event.message.id)
-    count = await bot.get_participants(settings.bot.group_name)
-    await event.respond(f'Количество участников: {count.total}')
+    if event.peer_id.user_id == settings.bot.admin_id:
+        await bot.delete_messages(event.chat_id, message_ids=event.message.id)
+        count = await bot.get_participants(settings.bot.group_name)
+        await event.respond(f'Количество участников: {count.total}')
 
 
 @bot.on(events.NewMessage(pattern='/members'))
 async def subs_list(event):
-    await bot.delete_messages(event.chat_id, message_ids=event.message.id)
-    participants = await bot.get_participants(settings.bot.group_name)
+    if event.peer_id.user_id == settings.bot.admin_id:
+        await bot.delete_messages(event.chat_id, message_ids=event.message.id)
+        participants = await bot.get_participants(settings.bot.group_name)
 
-    max_message_length = 4096
-    i = 1
-    message = ""
+        max_message_length = 4096
+        i = 1
+        message = ""
 
-    for participant in participants:
-        current_info = ""
-        current_info += "[ " + str(i) + " ]\n"
+        for participant in participants:
+            current_info = ""
+            current_info += "[ " + str(i) + " ]\n"
 
-        if participant.first_name:
-            current_info += f"├ {participant.first_name}\n"
-        if participant.last_name:
-            current_info += f"├ {participant.last_name}\n"
-        if participant.username:
-            current_info += f"├ USER: @{participant.username}\n"
+            if participant.first_name:
+                current_info += f"├ {participant.first_name}\n"
+            if participant.last_name:
+                current_info += f"├ {participant.last_name}\n"
+            if participant.username:
+                current_info += f"├ USER: @{participant.username}\n"
 
-        current_info += f"└ ID: {participant.id}\n"
+            current_info += f"└ ID: {participant.id}\n"
 
-        if len(message + current_info) < max_message_length:
-            message += current_info
-        else:
+            if len(message + current_info) < max_message_length:
+                message += current_info
+            else:
+                await event.respond(message)
+                message = current_info
+
+            i += 1
+
+        if message:
             await event.respond(message)
-            message = current_info
-
-        i += 1
-
-    if message:
-        await event.respond(message)
 
 
 in_list = ['🌚', '🔥', '✅', '😍', '👑', '✔', '☑️', '⚡', '😈', '❤️', '❤️‍🔥', '⭐', '🌟', '♥️', '💖', '💎', '⚜️', '🥳', '🥵', '🧲',
@@ -110,14 +114,6 @@ async def chat_action(event):
                                    f'{random_element} {farewell_phrases[randint(0, len(farewell_phrases))]} {name}...')
 
 
-async def admin_reply():
-    global Kmsg
-    while True:
-        if Kmsg != bot.get_messages(5867206789, limit=1):
-            break
-    return bot.get_messages(5867206789, limit=1)
-
-
 @bot.on(events.NewMessage(pattern='/random'))
 async def random_winner(event):
     global Kmsg
@@ -125,12 +121,10 @@ async def random_winner(event):
         await event.respond('Введите количество победителей (count):')
         await bot.get_messages(5867206789, limit=1)
         print(await bot.get_messages(5867206789, limit=1))
-        count = admin_reply()
 
         await event.respond('Введите таймер (в секундах) перед определением победителей (timer):')
         Kmsg = bot.get_messages(5867206789, limit=1).text
         print(Kmsg, " r")
-        timer = admin_reply()
 
     else:
         await event.respond('Вы не администратор бота.')
@@ -167,27 +161,52 @@ async def random_winner(event):
 
 @bot.on(events.NewMessage(pattern='/fake'))
 async def fake(event):
-    await bot.delete_messages(event.chat_id, message_ids=event.message.id)
-    await bot.send_message(settings.bot.group_name, "Это фейк...")
+    if event.peer_id.user_id == settings.bot.admin_id:
+        await bot.delete_messages(event.chat_id, message_ids=event.message.id)
+        await bot.send_message(settings.bot.group_name, "Это фейк...")
 
 
 @bot.on(events.NewMessage(pattern='/give'))
 async def give(event):
-    global message_list, keyboard
-    await bot.delete_messages(event.chat_id, message_ids=event.message.id)
-    if len(message_list) != 0:
-        for message in reversed(message_list):
-            await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
-        message_list = []
-    mesg1 = await bot.send_message(settings.bot.admin_id, 'Перед запуском конкурса не забудьте установить '
-                                                          'все необходимые параметры в **"Меню управления"**:',
-                                   parse_mode='md', buttons=keyboard)
-    message_list.append(mesg1)
+    if event.peer_id.user_id == settings.bot.admin_id:
+        global message_list, keyboard
+        await bot.delete_messages(event.chat_id, message_ids=event.message.id)
+        if len(message_list) != 0:
+            for message in reversed(message_list):
+                await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
+            message_list = []
+        mesg1 = await bot.send_message(settings.bot.admin_id, 'Перед запуском конкурса не забудьте установить '
+                                                              'все необходимые параметры в **"Меню управления"**:',
+                                       parse_mode='md', buttons=keyboard)
+        message_list.append(mesg1)
+
+
+@bot.on(events.NewMessage())
+async def process_executor(event):
+    if event.peer_id.user_id == settings.bot.admin_id:
+        global data_message, timer, count, text
+        if data_message == "":
+            return
+        elif data_message == "count_button":
+            try:
+                count = int(event.message.message)
+            except:
+                await bot.send_message(event.peer_id.user_id, "Неверный формат количества победителей, повторите ввод:")
+                return
+        elif data_message == "timer_button":
+            try:
+                timer = int(event.message.message)
+                await bot.send_message(event.peer_id.user_id, "Неверный формат времени, повторите ввод:")
+            except:
+                return
+        elif data_message == "text_button":
+            text = event.message.message
+        data_message = ""
 
 
 @bot.on(events.CallbackQuery())
 async def checkout(event):
-    global timer, count, message_list, message_list1, keyboard
+    global timer, count, message_list, message_list1, keyboard, data_message
     # message = await bot.get_messages(entity)
     # print(message.text)
     event_data = event.data.decode('utf-8')
@@ -250,9 +269,16 @@ async def checkout(event):
         keyboard = keyboard_stopped
         timer = 0
         count = 0
-        mesg1 = ""
-        mesg = ""
         await event.answer("💢 Розыгрыш удалён 💢", alert=True)
+    elif event_data == "count_button":
+        data_message = event_data
+        await bot.send_message(settings.bot.admin_id, "Введите количество победителей:")
+    elif event_data == "timer_button":
+        data_message = event_data
+        await bot.send_message(settings.bot.admin_id, "Установите таймер в формате(чч:мм:сс):")
+    elif event_data == "text_button":
+        data_message = event_data
+        await bot.send_message(settings.bot.admin_id, "Введите текст сообщения розыгрыша:")
 
 
 async def main():
