@@ -19,12 +19,14 @@ bot = TelegramClient('bot_session', settings.bot.api_id, settings.bot.api_hash)
 bot.parse_mode = "html"
 
 keyboard = keyboard_stopped
-timer = 0
-count = 0
-text = ""
+timer = None
+count = None
+text = None
+is_raffle_running = None
 message_list = []
 message_list1 = []
 data_message = ""
+
 
 @bot.on(events.NewMessage(pattern='/start'))
 async def start(event):
@@ -85,7 +87,6 @@ out_list = ['🗿', '💩', '🐁', '✍', '🐷', '❌', '😕', '☠️', '�
 @bot.on(events.ChatAction())
 async def chat_action(event):
     if str(event.chat_id) == str(settings.bot.group_id):
-
         if event.user_added:
             user = await event.get_user()
             if user.username:
@@ -114,49 +115,9 @@ async def chat_action(event):
                                    f'{random_element} {farewell_phrases[randint(0, len(farewell_phrases))]} {name}...')
 
 
-@bot.on(events.NewMessage(pattern='/random'))
-async def random_winner(event):
-    global Kmsg
-    if event.sender.id == settings.bot.admin_id:
-        await event.respond('Введите количество победителей (count):')
-        await bot.get_messages(5867206789, limit=1)
-        print(await bot.get_messages(5867206789, limit=1))
-
-        await event.respond('Введите таймер (в секундах) перед определением победителей (timer):')
-        Kmsg = bot.get_messages(5867206789, limit=1).text
-        print(Kmsg, " r")
-
-    else:
-        await event.respond('Вы не администратор бота.')
-        return
-
-    await asyncio.sleep(int(timer))
-
-    participants = await bot.get_participants(settings.bot.group_name)
-    win_list = list()
-    for i in range(len(participants)):
-        if participants[i].id != 673819158 and participants[i].id != 5300757743 and participants[i].id != 6381033226:
-            win_list.append(str(participants[i].id) + " " + str(participants[i].username))
-
-    winners = []
-    for i in range(int(count)):
-        if win_list:
-            winner_index = randint(0, len(win_list) - 1)
-            winners.append(win_list.pop(winner_index))
-
-    await event.respond(f'Победители: {", ".join(winners)}')
-
-
-# @bot.on(events.NewMessage(pattern='/go'))
-# async def randomchik(event):
-#     await bot.delete_messages(event.chat_id, message_ids=event.message.id)
-#     mesg = await bot.send_message(settings.bot.group_name, "🎁Конкурс🎁\n"
-#                                                            "Чтобы принять участие, вам необходимо:\n"
-#                                                            "1) Быть участником канала🧬\n"
-#                                                            "2) Не быть Кашалотиком (Ильей🐳) и Женьком🤡\n"
-#                                                            "3) Нажать на кнопку и ждать результат!!💋💋💋",
-#                                   buttons=[Button.inline('Участвовать Первым🤓', data='checkout')])
-
+    # for i in range(len(participants)):
+    #     if participants[i].id != 673819158 and participants[i].id != 5300757743 and participants[i].id != 6381033226:
+    #         win_list.append(str(participants[i].id) + " " + str(participants[i].username))
 
 
 @bot.on(events.NewMessage(pattern='/fake'))
@@ -166,7 +127,7 @@ async def fake(event):
         await bot.send_message(settings.bot.group_name, "Это фейк...")
 
 
-@bot.on(events.NewMessage(pattern='/give'))
+@bot.on(events.NewMessage(pattern='/go'))
 async def give(event):
     if event.peer_id.user_id == settings.bot.admin_id:
         global message_list, keyboard
@@ -183,8 +144,9 @@ async def give(event):
 
 @bot.on(events.NewMessage())
 async def process_executor(event):
-    if event.peer_id.user_id == settings.bot.admin_id:
-        global data_message, timer, count, text
+    chat_id = event.chat_id
+    if int(chat_id) == settings.bot.admin_id:
+        global data_message, timer, count, text, message_list, keyboard
         if data_message == "":
             return
         elif data_message == "count_button":
@@ -196,17 +158,26 @@ async def process_executor(event):
         elif data_message == "timer_button":
             try:
                 timer = int(event.message.message)
-                await bot.send_message(event.peer_id.user_id, "Неверный формат времени, повторите ввод:")
             except:
+                await bot.send_message(event.peer_id.user_id, "Неверный формат времени, повторите ввод:")
                 return
         elif data_message == "text_button":
             text = event.message.message
         data_message = ""
+        if len(message_list) != 0:
+            for message in reversed(message_list):
+                await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
+            message_list = []
+        mesg1 = await bot.send_message(settings.bot.admin_id, 'Перед запуском конкурса не забудьте установить '
+                                                              'все необходимые параметры в **"Меню управления"**:',
+                                       parse_mode='md', buttons=keyboard)
+        message_list.append(mesg1)
 
 
 @bot.on(events.CallbackQuery())
 async def checkout(event):
-    global timer, count, message_list, message_list1, keyboard, data_message
+    global timer, count, text, message_list, message_list1, keyboard, data_message, is_raffle_running
+    # await bot.catch_up()
     # message = await bot.get_messages(entity)
     # print(message.text)
     event_data = event.data.decode('utf-8')
@@ -223,36 +194,77 @@ async def checkout(event):
                         break
                 if in_channel:
                     file.write(user_id + '\n')
-                    await bot.edit_message(settings.bot.admin_id, message_list1[0],
+                    await bot.edit_message(settings.bot.group_name, message_list1[0],
                                            buttons=[Button.inline(f'Уже участников: {len(user_ids) + 1}🤠', data='checkout')])
                     random_index = randint(0, len(in_list) - 1)
                     random_element = in_list[random_index]
-                    await event.answer(f"{random_element} Вы красавчик! {random_element}", alert=True)
+                    await event.answer(f"{random_element} Вы теперь участник! {random_element}")
                 else:
-                    await event.answer("💢 Вы не подписаны 💢", alert=True)
+                    await event.answer("💢 Вы не подписаны 💢")
             else:
-                await event.answer("💞 Вы уже участник 💞", alert=True)
+                await event.answer("💢 Вы уже участвуете 💢")
     elif event_data == "start_button":
-        keyboard = keyboard_started
-        await bot.edit_message(settings.bot.admin_id, message_list[0], buttons=keyboard)
-        #if timer and count and mesg:
-        if len(message_list1) == 0:
-            await event.answer("🔥 Конкурс запущен 🔥", alert=True)
-            mesg = await bot.send_message(settings.bot.admin_id, "🎁Конкурс🎁\n"
-                                                                   "Чтобы принять участие, вам необходимо:\n"
-                                                                   "1) Быть участником канала🧬\n"
-                                                                   "2) Не быть Кашалотиком (Ильей🐳) и Женьком🤡\n"
-                                                                   "3) Нажать на кнопку и ждать результат!!💋💋💋",
-                                          buttons=[Button.inline('Участвовать в розыгрыше🤓', data='checkout')])
-            message_list1.append(mesg)
+        if count and timer and text:
+            keyboard = keyboard_started
+            await bot.edit_message(settings.bot.admin_id, message_list[0], buttons=keyboard)
+            if len(message_list1) == 0:
+                await event.answer("🔥 Конкурс запущен 🔥")
+                mesg = await bot.send_message(settings.bot.group_name, message=text,
+                                              buttons=[Button.inline('Участвовать в розыгрыше🤓', data='checkout')])
+                message_list1.append(mesg)
+
+                is_raffle_running = True
+
+                await asyncio.sleep(int(timer))
+
+                if is_raffle_running:
+                    winners = []
+                    with open('root_package/go_list.txt', 'r') as file:
+                        user_ids = list(line.strip() for line in file)
+                        for i in range(min(len(user_ids),count)):
+                            if user_ids:
+                                winner_index = randint(0, len(user_ids) - 1)
+                                winners.append(user_ids.pop(winner_index))
+
+                    i = 1
+                    for i in range(len(winners)):
+                        winners[i] = await bot.get_entity(int(winners[i]))
+                    print(len(winners))
+                    for participant in winners:
+                        current_info = ""
+                        current_info += "[ " + str(i) + " ]\n"
+
+                        if participant.first_name:
+                            current_info += f"├ {participant.first_name}\n"
+                        if participant.last_name:
+                            current_info += f"├ {participant.last_name}\n"
+                        if participant.username:
+                            current_info += f"├ USER: @{participant.username}\n"
+
+                        current_info += f"└ ID: {participant.id}\n"
+                        winners[i-1] = current_info
+
+                        i += 1
+
+                    await event.respond(f'Победители:\n{"".join(winners)}')
+            else:
+                await event.answer("💢 Розыгрыш запущен 💢")
         else:
-            await event.answer("💢 Розыгрыш запущен 💢", alert=True)
+            ans_list = []
+            if not(count): ans_list.append("кол-во победителей")
+            if not(timer): ans_list.append("таймер")
+            if not(text): ans_list.append("текст")
+
+            await event.answer("Установите: " + ", ".join(ans_list))
     elif event_data == "stop_button":
+        is_raffle_running = False
+
         keyboard = keyboard_stopped
         await bot.edit_message(settings.bot.admin_id, message_list[0], buttons=keyboard)
         for message in message_list1:
-            await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
+            await bot.delete_messages(entity=settings.bot.group_name, message_ids=message.id)
         message_list1 = []
+
         await event.answer("💢 Остановочка 💢", alert=True)
     elif event_data == "close_button":
         for message in message_list:
@@ -264,21 +276,26 @@ async def checkout(event):
             await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
         message_list = []
         for message in message_list1:
-            await bot.delete_messages(entity=settings.bot.admin_id, message_ids=message.id)
+            await bot.delete_messages(entity=settings.bot.group_name, message_ids=message.id)
         message_list1 = []
         keyboard = keyboard_stopped
-        timer = 0
-        count = 0
-        await event.answer("💢 Розыгрыш удалён 💢", alert=True)
+        timer = None
+        count = None
+        text = None
+        is_raffle_running = False
+        await event.answer("💢 Розыгрыш удалён 💢")
     elif event_data == "count_button":
         data_message = event_data
         await bot.send_message(settings.bot.admin_id, "Введите количество победителей:")
+        await event.answer()
     elif event_data == "timer_button":
         data_message = event_data
-        await bot.send_message(settings.bot.admin_id, "Установите таймер в формате(чч:мм:сс):")
+        await bot.send_message(settings.bot.admin_id, "Установите таймер в секундах:")
+        await event.answer()
     elif event_data == "text_button":
         data_message = event_data
         await bot.send_message(settings.bot.admin_id, "Введите текст сообщения розыгрыша:")
+        await event.answer()
 
 
 async def main():
